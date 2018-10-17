@@ -6,14 +6,12 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.LinkedList;
 import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingDeque;
-import java.util.concurrent.BlockingQueue;
 
 public class GraphicalBoard extends JPanel {
     private final EventLoop event_loop;
     private final Player player;
     private final MctsTicTacToePlayer bot;
-    private final Game game;
+    private char[][] grid;
     ArrayBlockingQueue<Integer> queue;
 
     @Override
@@ -28,8 +26,7 @@ public class GraphicalBoard extends JPanel {
 
         player = new Player(queue);
         bot = new MctsTicTacToePlayer(10000);
-        TicTacToeBoard board = new TicTacToeBoard();
-        game = new Game(board);
+        grid = null;
 
         initBoard();
         event_loop.start();
@@ -64,6 +61,23 @@ public class GraphicalBoard extends JPanel {
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
                 g2d.drawRect(j * cell_size, i * cell_size, cell_size, cell_size);
+            }
+        }
+
+        if (grid != null) {
+            for (int i = 0; i < 3; i++) {
+                for (int j = 0; j < 3; j++) {
+                    if (grid[i][j] == GameSymbols.Player1Symbol) {
+                        // draw X
+                        g2d.setColor(Color.red);
+                        g2d.drawLine(j * cell_size, i * cell_size, (j + 1) * cell_size, (i + 1) * cell_size);
+                        g2d.drawLine((j+1) * cell_size, i * cell_size, j * cell_size, (i + 1) * cell_size);
+                    } else if (grid[i][j] == GameSymbols.Player2Symbol) {
+                        // draw O
+                        g2d.setColor(Color.blue);
+                        g2d.drawArc(j * cell_size, i * cell_size, cell_size, cell_size, 0, 360);
+                    }
+                }
             }
         }
     }
@@ -122,7 +136,8 @@ public class GraphicalBoard extends JPanel {
         @Override
         public void makeMove(TicTacToeMove chosenMove) {
             super.makeMove(chosenMove);
-            board.printBoard();
+            grid = board.getGrid().clone();
+            repaint();
         }
     }
 
@@ -130,6 +145,8 @@ public class GraphicalBoard extends JPanel {
         @Override
         public void run() {
             while (true) {
+                TicTacToeBoard board = new TicTacToeBoard();
+                Game game = new Game(board);
                 game.play(player, bot);
             }
         }

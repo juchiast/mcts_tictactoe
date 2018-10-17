@@ -67,4 +67,8 @@ public class TicTacToeBoard {
         }
         return copy;
     }
+
+    public char[][] getGrid() {
+        return grid;
+    }
 }
