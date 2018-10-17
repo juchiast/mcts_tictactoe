@@ -11,6 +11,9 @@ import java.util.concurrent.BlockingQueue;
 
 public class GraphicalBoard extends JPanel {
     private final EventLoop event_loop;
+    private final Player player;
+    private final MctsTicTacToePlayer bot;
+    private final Game game;
     ArrayBlockingQueue<Integer> queue;
 
     @Override
@@ -21,9 +24,15 @@ public class GraphicalBoard extends JPanel {
 
     public GraphicalBoard() {
         queue = new ArrayBlockingQueue<Integer>(100);
-        event_loop = new EventLoop(queue);
-        event_loop.start();
+        event_loop = new EventLoop();
+
+        player = new Player(queue);
+        bot = new MctsTicTacToePlayer(10000);
+        TicTacToeBoard board = new TicTacToeBoard();
+        game = new Game(board);
+
         initBoard();
+        event_loop.start();
     }
 
     private void initBoard() {
@@ -77,31 +86,52 @@ public class GraphicalBoard extends JPanel {
     }
 
     private class Player implements TicTacToePlayer {
+        ArrayBlockingQueue<Integer> queue;
+        public Player(ArrayBlockingQueue<Integer> q) {
+            queue = q;
+        }
+
         @Override
         public TicTacToeMove getMove(TicTacToeGame game) {
-            LinkedList<TicTacToeMove> moves = game.getAvailableMoves();
-            return null;
-        }
-    }
-
-    private class EventLoop extends Thread {
-        ArrayBlockingQueue<Integer> queue;
-        public EventLoop(ArrayBlockingQueue<Integer> _queue) {
-            queue = _queue;
-        }
-
-        public void run() {
             try {
                 while (true) {
                     Integer x = queue.take();
                     int i = x / 3;
                     int j = x % 3;
-                    System.out.println(i + " " + j);
+                    LinkedList<TicTacToeMove> moves = game.getAvailableMoves();
+                    for (int id = 0; id < moves.size(); id++) {
+                        int row = moves.get(id).position.y;
+                        int col = moves.get(id).position.x;
+                        if (row == i && col == j) {
+                            return moves.get(id);
+                        }
+                    }
                 }
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
+            return null;
+        }
+    }
+
+    private class Game extends TicTacToeGame {
+        public Game(TicTacToeBoard board) {
+            super(board);
         }
 
+        @Override
+        public void makeMove(TicTacToeMove chosenMove) {
+            super.makeMove(chosenMove);
+            board.printBoard();
+        }
+    }
+
+    private class EventLoop extends Thread {
+        @Override
+        public void run() {
+            while (true) {
+                game.play(player, bot);
+            }
+        }
     }
 }
