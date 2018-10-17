@@ -4,9 +4,15 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
+import java.util.LinkedList;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingDeque;
+import java.util.concurrent.BlockingQueue;
 
 public class GraphicalBoard extends JPanel {
+    private final EventLoop event_loop;
+    ArrayBlockingQueue<Integer> queue;
+
     @Override
     public void paintComponent(Graphics g) {
         super.paintComponents(g);
@@ -14,6 +20,9 @@ public class GraphicalBoard extends JPanel {
     }
 
     public GraphicalBoard() {
+        queue = new ArrayBlockingQueue<Integer>(100);
+        event_loop = new EventLoop(queue);
+        event_loop.start();
         initBoard();
     }
 
@@ -22,14 +31,12 @@ public class GraphicalBoard extends JPanel {
     }
 
     private int getCellSize() {
-        int cell_size = getBoardSize() / 3;
-        return cell_size;
+        return getBoardSize() / 3;
     }
 
     private int getBoardSize() {
         Dimension window_size = getSize();
-        int size = (int) Math.min(window_size.getHeight(), window_size.getWidth());
-        return size;
+        return (int) Math.min(window_size.getHeight(), window_size.getWidth());
     }
 
     private void drawBoard(Graphics g) {
@@ -37,17 +44,17 @@ public class GraphicalBoard extends JPanel {
 
         int board_size = getBoardSize();
         int cell_size = getCellSize();
-        int border_size = Math.max(1, cell_size / 15);
+        int stroke_size = Math.max(1, cell_size / 15);
 
         g2d.setColor(Color.white);
         g2d.fillRect(0, 0, board_size, board_size);
 
+        g2d.setStroke(new BasicStroke(stroke_size));
 
         g2d.setColor(Color.black);
-        g2d.setStroke(new BasicStroke(border_size));
-        for (int i=0; i<3; i++) {
+        for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
-                g2d.drawRect(j*cell_size, i * cell_size, cell_size, cell_size);
+                g2d.drawRect(j * cell_size, i * cell_size, cell_size, cell_size);
             }
         }
     }
@@ -61,7 +68,40 @@ public class GraphicalBoard extends JPanel {
             int cell = getCellSize();
             int j = x / cell;
             int i = y / cell;
-            System.out.println(i + " " + j);
+            try {
+                queue.put(i * 3 + j);
+            } catch (InterruptedException e1) {
+                e1.printStackTrace();
+            }
         }
+    }
+
+    private class Player implements TicTacToePlayer {
+        @Override
+        public TicTacToeMove getMove(TicTacToeGame game) {
+            LinkedList<TicTacToeMove> moves = game.getAvailableMoves();
+            return null;
+        }
+    }
+
+    private class EventLoop extends Thread {
+        ArrayBlockingQueue<Integer> queue;
+        public EventLoop(ArrayBlockingQueue<Integer> _queue) {
+            queue = _queue;
+        }
+
+        public void run() {
+            try {
+                while (true) {
+                    Integer x = queue.take();
+                    int i = x / 3;
+                    int j = x % 3;
+                    System.out.println(i + " " + j);
+                }
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+
     }
 }
